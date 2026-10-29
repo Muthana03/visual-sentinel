@@ -49,9 +49,10 @@
     box.appendChild(ctl); box.appendChild(read);
     var W = 1920, H = 1080, cx = (W - 1) / 2, f = 1600;
     var C = [70, 165], D = 125, s = 6.0;              // camera centre on screen, image-plane distance on screen, screen px per metre
-    var P = [32, 7];                                  // the world point: depth Z (m), lateral X (m)
+    var P = [32, -7];                                 // the world point: depth Z (m), lateral X (m, camera's right positive)
     var getF = slider(ctl, 'focal length f', { min: 400, max: 3200, step: 10, value: f, fmt: function (v) { return v + ' px'; } }, function (v) { f = v; draw(); });
-    var toScreen = function (Z, X) { return [C[0] + Z * s, C[1] - X * s]; };
+    // seen from above with the camera looking right, the camera's RIGHT is down the page and its LEFT is up
+    var toScreen = function (Z, X) { return [C[0] + Z * s, C[1] + X * s]; };
     function draw() {
       g.clearRect(0, 0, cv._w, cv._h);
       var halfH = D * (W / 2) / f, px = C[0] + D;
@@ -63,10 +64,12 @@
       // image plane
       line(g, px, C[1] - halfH, px, C[1] + halfH, '#333', 2);
       text(g, 'image plane', px + 6, C[1] - halfH - 6, { font: '11px', color: '#555' });
+      text(g, 'camera\'s left (−X)', px - 6, C[1] - halfH + 4, { align: 'right', font: '10px', color: '#888' });
+      text(g, 'camera\'s right (+X)', px - 6, C[1] + halfH + 4, { align: 'right', font: '10px', color: '#888' });
       text(g, 'f', C[0] + D / 2, C[1] + 16, { align: 'center', color: '#555', font: 'italic 12px' });
       line(g, C[0], C[1] + 8, px, C[1] + 8, '#999', 1);
       // the point, its ray and where it crosses the plane
-      var Z = P[0], X = P[1], sp = toScreen(Z, X), yHit = C[1] - D * X / Z, u = f * X / Z + cx, inView = Math.abs(u - cx) <= W / 2;
+      var Z = P[0], X = P[1], sp = toScreen(Z, X), yHit = C[1] + D * X / Z, u = f * X / Z + cx, inView = Math.abs(u - cx) <= W / 2;
       line(g, C[0], C[1], sp[0], sp[1], inView ? css('--truth') : css('--est'), 1.5);
       dot(g, C[0], C[1], 5, '#222');
       text(g, 'camera centre', C[0] - 6, C[1] + 26, { font: '11px', color: '#555' });
@@ -83,7 +86,7 @@
         '\nhorizontal field of view: ' + f1(2 * Math.atan(W / 2 / f) / D2R) + '°' +
         '\nat ' + f1(Z) + ' m one pixel covers ' + (gsd * 100).toFixed(1) + ' cm; a 0.6 m drone is ' + f1(drone) + ' px wide';
     }
-    dragger(cv, [{ get: function () { return toScreen(P[0], P[1]); }, set: function (x, y) { P = [Math.max(3, (x - C[0]) / s), (C[1] - y) / s]; }, r: 16 }], draw);
+    dragger(cv, [{ get: function () { return toScreen(P[0], P[1]); }, set: function (x, y) { P = [Math.max(3, (x - C[0]) / s), (y - C[1]) / s]; }, r: 16 }], draw);
     draw();
   };
 
@@ -163,14 +166,12 @@
   VS.errorcurve = function (box) {
     var cvg = canvas(box, 600, 360), cv = cvg[0], g = cvg[1], ctl = el('div', 'controls'), read = el('div', 'readout');
     box.appendChild(ctl); box.appendChild(read);
-    var f = 3197;   // the calibrated 18 mm R10 focal length at 3840 px, as used in the field test
-    var field = { 0.5: [[4, 3.8], [10, 8.9], [20, 15], [61, 47], [80, 62], [120, 80]], 1: [[4, 4.3], [10, 10.9], [20, 18], [61, 54], [80, 72], [120, 108]], 2: [[4, 4.3], [10, 10.5], [20, 23], [61, 59], [80, 84], [120, 116]] };
-    var fcol = { 0.5: '#d97706', 1: '#7c3aed', 2: '#0e7490' };
-    var B = 1, sH = 0.03, sPx = 2;
+    var f = 3197;   // the calibrated 18 mm R10 focal length at 3840 px
+    var B = 1, sH = 0.1, sPx = 2;
     var getB = slider(ctl, 'baseline B', { min: 0.5, max: 50, step: 0.5, value: B, fmt: function (v) { return f1(v) + ' m'; } }, function (v) { B = v; draw(); });
     var getH = slider(ctl, 'heading error σ', { min: 0, max: 1, step: 0.01, value: sH, fmt: function (v) { return f2(v) + '°'; } }, function (v) { sH = v; draw(); });
     var getP = slider(ctl, 'detection jitter σ', { min: 0, max: 6, step: 0.25, value: sPx, fmt: function (v) { return f2(v) + ' px'; } }, function (v) { sPx = v; draw(); });
-    var lg = el('div', 'legend', 'field test, 18 mm lens (report Table 3): <i class="sw" style="background:#d97706"></i>0.5 m baseline <i class="sw" style="background:#7c3aed"></i>1 m <i class="sw" style="background:#0e7490"></i>2 m &nbsp;·&nbsp; curve: 1-σ range error predicted for the sliders'); ctl.appendChild(lg);
+    var lg = el('div', 'legend', 'curve: 1-σ range error predicted by Z²·σ/B for the sliders, with f = 3197 px (the calibrated 18 mm lens); the vertical marks are the ranges of the generation-1 targets'); ctl.appendChild(lg);
     var L = 46, R = 14, T = 14, Bm = 34, Zmax = 130, Emax = 45;
     var X = function (z) { return L + (cv._w - L - R) * z / Zmax; }, Y = function (e) { return T + (cv._h - T - Bm) * (1 - Math.min(e, Emax) / Emax); };
     function draw() {
@@ -183,18 +184,18 @@
       g.beginPath(); g.strokeStyle = '#222'; g.lineWidth = 2;
       for (var zz = 1; zz <= Zmax; zz += 1) { var ee = zz * zz * sigRel / B, px = X(zz), py = Y(ee); if (zz === 1) g.moveTo(px, py); else g.lineTo(px, py); if (ee > Emax) break; }
       g.stroke();
-      Object.keys(field).forEach(function (b) { field[b].forEach(function (p) { var err = Math.abs(p[1] - p[0]); dot(g, X(p[0]), Y(err), 4.5, fcol[b], '#fff'); }); });
+      [4, 10, 20, 61, 80, 120].forEach(function (z) { var e = z * z * sigRel / B; line(g, X(z), cv._h - Bm, X(z), cv._h - Bm - 6, '#999', 1); if (e <= Emax) dot(g, X(z), Y(e), 3.5, '#222', '#fff'); });
       var at120 = 120 * 120 * sigRel / B;
       read.textContent = 'σ_rel = √2 · √(σ_heading² + (σ_px / f)²) = ' + (sigRel / D2R).toFixed(3) + '°   with f = ' + f + ' px' +
         '\npredicted 1-σ range error at 120 m with a ' + f1(B) + ' m baseline: ' + f1(at120) + ' m' +
-        '\nhint: with the baseline set to 0.5, 1 or 2 m, a σ of about 0.03–0.08° runs through the matching field points';
+        '\ntry: baseline 1 m and 46 m at the same σ; then baseline 1 m with σ = 0.03° (two cameras on one bar) and σ = 7° (a compass per camera)';
     }
     draw();
   };
 
   /* ---- 4. Compass and tilt to a rotation matrix ---- */
   VS.frames = function (box) {
-    var cvg = canvas(box, 600, 230), cv = cvg[0], g = cvg[1], ctl = el('div', 'controls'), read = el('div', 'readout');
+    var cvg = canvas(box, 600, 256), cv = cvg[0], g = cvg[1], ctl = el('div', 'controls'), read = el('div', 'readout');
     box.appendChild(ctl); box.appendChild(read);
     var h = 22, p = 17;
     slider(ctl, 'heading (compass)', { min: 0, max: 359, step: 1, value: h, fmt: function (v) { return v + '°'; } }, function (v) { h = v; draw(); });
@@ -213,7 +214,7 @@
       [['N', 0], ['E', 90], ['S', 180], ['W', 270]].forEach(function (d) { var a = d[1] * D2R; text(g, d[0], cx + (rad + 14) * Math.sin(a), cy - (rad + 14) * Math.cos(a) + 4, { align: 'center', font: 'bold 12px', color: '#555' }); });
       var ax = cx + rad * 0.9 * Math.sin(h * D2R), ay = cy - rad * 0.9 * Math.cos(h * D2R);
       line(g, cx, cy, ax, ay, css('--cam1'), 3); dot(g, cx, cy, 4, '#222');
-      text(g, 'top view: heading', cx, cy + rad + 32, { align: 'center', font: '11px', color: '#555' });
+      text(g, 'top view: heading', cx, cy + rad + 30, { align: 'center', font: '11px', color: '#555' });
       // side view
       var sx = 330, sy = 150, len = 150;
       line(g, sx - 20, sy, sx + 230, sy, '#999', 1); text(g, 'horizon', sx + 232, sy + 4, { font: '11px', color: '#777' });

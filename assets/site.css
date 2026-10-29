@@ -54,11 +54,11 @@ ul.compact{margin:0;padding:0} ul.compact li{list-style:square inside}
 #header,#header a{color:silver}
 #header:hover a{color:#000;text-shadow:#aaa 2px 2px 3px}
 #header:hover a:hover{text-decoration:none}
-#header{position:relative;font-variant:small-caps;line-height:1em;margin-top:.5em;margin-bottom:0}
-#header h1{font-family:"Palatino Linotype",Palatino,Georgia,"Times New Roman",serif;margin-bottom:0;display:block;font-weight:normal;font-size:1.3em}
-#header ul{position:absolute;top:0;right:0;font-size:100%;display:block;margin:0;width:62%;text-align:right;padding:0}
+#header{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:.4em 1.5em;font-variant:small-caps;line-height:1.1em;margin-top:.5em;margin-bottom:.4em}
+#header h1{font-family:"Palatino Linotype",Palatino,Georgia,"Times New Roman",serif;margin-bottom:0;display:block;font-weight:normal;font-size:1.3em;white-space:nowrap}
+#header ul{font-size:100%;display:flex;flex-wrap:wrap;gap:0 .1em;margin:0;padding:0;text-align:right;margin-left:auto}
 #header ul li{display:inline;list-style:none;margin:0}
-#header ul li a{padding:.4em .3em 0;display:inline}
+#header ul li a{padding:.4em .3em 0;display:inline;white-space:nowrap}
 #header ul li a:hover{color:blue;border-bottom:2px solid blue}
 #header ul li a.active{border-bottom:2px solid silver}
 #header .byline{color:silver;font-size:10pt;line-height:75%}
@@ -111,7 +111,8 @@ mjx-container[display="true"]{overflow-x:auto;overflow-y:hidden;margin:1em 0!imp
 button:focus-visible,input:focus-visible,a:focus-visible{outline:2px solid var(--link);outline-offset:2px}
 @media (max-width:640px){
   #page{padding:1.5em 1.1em 1em}
-  #header ul{position:static;width:auto;text-align:left;margin-top:.7em}
+  #header h1{white-space:normal}
+  #header ul{margin-left:0;text-align:left;margin-top:.4em}
   #header ul li a{padding:.2em .5em 0 0}
   .context-img{float:none;margin:1em auto;max-width:100%}
   .toc{columns:1}
