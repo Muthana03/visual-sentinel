@@ -1,0 +1,121 @@
+/* site.css — Visual Sentinel
+ * A port of Mark Reid's screen.css (the design behind ksimek.github.io), kept light
+ * by design: the page is a sheet of paper. Extended with styles for the interactive demos.
+ * Base font 16px, vertical rhythm 24px. */
+:root{--bg:whitesmoke;--paper:#fff;--ink:#404040;--muted:#999;--caption:#666;--link:#0645ad;--rule:silver;--border:#ccc;--shadow:#aaa;
+  --code-bg:#fffff0;--code-border:#ddc;--note:#fafaff;--truth:#15803d;--est:#dc2626;--cam1:#d97706;--cam2:#7c3aed;--accent:#0645ad;color-scheme:light}
+body,div,dl,dt,dd,ul,ol,li,h1,h2,h3,h4,h5,h6,pre,form,fieldset,p,blockquote,th,td,abbr,figure{margin:0;padding:0}
+body{font-size:100%;font-family:"Lato","Helvetica Neue",Arial,sans-serif;color:var(--ink);background:var(--bg);line-height:1.5}
+img{max-width:100%;height:auto}
+.article img{display:block;margin-left:auto;margin-right:auto}
+p{margin:1.5em 0}
+a{text-decoration:none;color:var(--link)} a:visited{color:var(--link)} a:hover{text-decoration:underline}
+h1,h2,h3,h4{line-height:1.25em;font-weight:normal;clear:left;font-family:"Lucida Grande","Lucida Sans Unicode","Lato",sans-serif;text-wrap:balance}
+h1{font-size:1.3em}
+h2{font-size:1em;font-weight:bold;margin-top:2.25em}
+h3{font-size:1em;font-style:italic;margin-top:1.5em}
+h2+p,h3+p{margin-top:.75em}
+.title-link{color:#000!important;text-decoration:none}
+.clearer{clear:both}
+.date{line-height:1.5em;color:var(--muted);margin:4px 0 1.5em 0;font-style:italic}
+.notice{font-size:90%;padding:.25em .5em;font-style:italic;margin:1.5em 0}
+.context-img{float:right;margin:0 0 1em 1.5em;max-width:45%}
+.context-img img{border:1px solid #999}
+.caption{color:var(--caption);font-size:75%;line-height:1.3em}
+.credit{font-style:italic}
+hr{border:0;border-top:1px solid var(--rule);margin:1.46em 0 0}
+sup{line-height:1ex}
+#site{max-width:50em;margin:1.5em auto 3em;line-height:1.5em;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+#page{background:var(--paper);padding:3em 3em 1.5em;border:1px solid var(--border);box-shadow:2px 2px 8px var(--shadow);min-width:0}
+.right{float:right;clear:left}.left{float:left;clear:right}
+.inset{border:1px solid silver;padding:2px;margin:0 .8em .8em}
+.quiet{color:grey;font-size:.875em;line-height:1.714em}
+.lead{font-size:1.06em}
+blockquote{padding:0 2.8em;margin:1.714em 0;color:#444;font-size:.875em;line-height:1.714em}
+.note{padding:.25em 1em;background:var(--note);border-top:1px solid silver;border-bottom:1px solid silver;margin:1.5em 0}
+.note p{margin:.75em 0}
+.tablewrap{overflow-x:auto;margin:1.5em 0}
+table.neat{width:92%;margin:0 auto;border-spacing:0;font-size:.9em;font-variant-numeric:tabular-nums}
+table.neat tr{text-align:center}
+table.neat th{font-weight:normal;background:#eee;padding:.25em .5em}
+table.neat td{background:#fff;padding:.25em .5em;border-bottom:1px solid #eee}
+table.neat th.title{border-bottom:1px solid gray;border-top:1px solid gray;vertical-align:bottom;background:lightgrey}
+table.neat .l{text-align:left}
+table.neat tr.hi td{background:#f7f7ff}
+caption{color:#333;font-size:75%;margin:.875em auto 0;line-height:1.14em;text-align:justify;caption-side:bottom}
+ul,ol{margin:1.5em 0;line-height:1.5em;padding-left:1.5em}
+ul li{list-style:square outside} ol li{list-style:decimal outside}
+li{margin:.2em 0}
+dt{font-weight:bold} dd{margin:0 0 1.5em}
+ul.compact{margin:0;padding:0} ul.compact li{list-style:square inside}
+.kv{display:grid;grid-template-columns:max-content 1fr;gap:.25em 1.25em;margin:1.5em 0;font-size:.95em}
+.kv dt{font-weight:bold} .kv dd{margin:0}
+/* header */
+#header,#header a{color:silver}
+#header:hover a{color:#000;text-shadow:#aaa 2px 2px 3px}
+#header:hover a:hover{text-decoration:none}
+#header{position:relative;font-variant:small-caps;line-height:1em;margin-top:.5em;margin-bottom:0}
+#header h1{font-family:"Palatino Linotype",Palatino,Georgia,"Times New Roman",serif;margin-bottom:0;display:block;font-weight:normal;font-size:1.3em}
+#header ul{position:absolute;top:0;right:0;font-size:100%;display:block;margin:0;width:62%;text-align:right;padding:0}
+#header ul li{display:inline;list-style:none;margin:0}
+#header ul li a{padding:.4em .3em 0;display:inline}
+#header ul li a:hover{color:blue;border-bottom:2px solid blue}
+#header ul li a.active{border-bottom:2px solid silver}
+#header .byline{color:silver;font-size:10pt;line-height:75%}
+#header:hover .byline a{color:silver;text-shadow:none}
+#header:hover .byline a:hover{color:#000;text-shadow:#aaa 1px 1px 2px}
+/* footnotes, code */
+.footnotes{color:grey;font-size:.875em} .footnotes:hover{color:#000}
+.footnotes ol li{list-style:decimal outside;line-height:1.5em}
+pre{margin:1em 0 1.5em;font-size:.75em;line-height:1.5em;color:#111;background:var(--code-bg);border:1px solid var(--code-border);padding:.5em 1em;overflow-x:auto;box-shadow:1px 1px 6px #ccc}
+code{font-size:1em;background:#f7f7ff;line-height:1.4em;font-family:Consolas,"Liberation Mono",Menlo,monospace;padding:0 .15em}
+pre>code{background:transparent;padding:0}
+/* footer */
+#footer{margin-top:0;color:grey;font-size:87.5%;line-height:1.3em}
+#footer address{margin:.5em 0 0;font-style:normal;display:flex;justify-content:space-between;gap:1em;flex-wrap:wrap}
+#footer a{font-variant:small-caps;font-style:normal;color:#77d;text-decoration:none}
+#footer .copyright{text-align:left}
+#footer .engine{text-align:right}
+/* figures */
+figure,dl.figure{margin:1.5em 0;text-align:center}
+figure svg{max-width:100%;height:auto}
+figcaption,dl.figure dd{color:#333;font-size:.875em;margin:.875em auto 0;line-height:1.3em;text-align:justify;width:85%}
+.prev-next{position:relative;margin-top:2.5em;display:flex;justify-content:space-between;gap:1em;flex-wrap:wrap}
+.prev-next .next{margin-left:auto}
+.tag_box{list-style:none;margin:0;padding:5px 0;overflow:hidden}
+.tag_box li{list-style:none;line-height:1.8em;display:inline;margin:0}
+.tag_box a,.badge{padding:2px 6px;margin:0 2px;background:#eee;border-radius:3px;border:1px dashed #ccc;text-decoration:none;font-size:.8em;color:#555;white-space:nowrap}
+.badge.measured{border-color:#9c9;background:#eef7ee;color:#2b6}
+.badge.simulated{border-color:#99c;background:#eef;color:#44a}
+.badge.planned{border-color:#ccc;background:#f3f3f3;color:#777}
+.toc{columns:2;column-gap:2em} .toc li{break-inside:avoid}
+.eq{overflow-x:auto}
+mjx-container[display="true"]{overflow-x:auto;overflow-y:hidden;margin:1em 0!important}
+/* interactive demos (after the original's .demo_3d and .slider-control) */
+.demo{max-width:600px;margin:1.5em auto}
+.demo canvas{border:1px solid #bbb;display:block;width:100%;height:auto;background:#fff;touch-action:none}
+.demo .caption{margin-top:.4em}
+.controls{font-size:85%;line-height:1.5em;margin-top:.75em}
+.slider-control{display:grid;grid-template-columns:9.5em 1fr 5.5em;gap:.75em;align-items:center;margin-bottom:.35em}
+.slider-label{font-family:sans-serif}
+.slider{width:100%;margin:0;min-width:0}
+.slider-control output{font-family:Consolas,"Liberation Mono",Menlo,monospace;text-align:right;font-size:.95em;color:#333;font-variant-numeric:tabular-nums}
+.readout{font-family:Consolas,"Liberation Mono",Menlo,monospace;font-size:.78em;line-height:1.5em;color:#333;background:#fafafa;border:1px solid #e6e6e6;padding:.5em .75em;margin-top:.6em;white-space:pre-wrap;font-variant-numeric:tabular-nums}
+.demo button,.btnrow button{font:inherit;font-size:.85em;padding:.15em .6em;border:1px solid #bbb;background:#f6f6f6;border-radius:3px;cursor:pointer;color:#333}
+.demo button:hover{background:#eee}
+.demo label.check{font-size:85%;margin-right:1em;white-space:nowrap}
+.demo .legend{font-size:75%;color:#666;margin-top:.4em}
+.sw{display:inline-block;width:10px;height:10px;border-radius:50%;vertical-align:-1px;margin:0 4px 0 8px}
+.cta{display:inline-block;margin:.5em .5em .5em 0;padding:.35em .9em;border:1px solid var(--link);border-radius:3px;color:var(--link)}
+.cta:hover{background:#eef3fb;text-decoration:none}
+button:focus-visible,input:focus-visible,a:focus-visible{outline:2px solid var(--link);outline-offset:2px}
+@media (max-width:640px){
+  #page{padding:1.5em 1.1em 1em}
+  #header ul{position:static;width:auto;text-align:left;margin-top:.7em}
+  #header ul li a{padding:.2em .5em 0 0}
+  .context-img{float:none;margin:1em auto;max-width:100%}
+  .toc{columns:1}
+  .slider-control{grid-template-columns:7.5em 1fr 4.5em}
+  blockquote{padding:0 1em}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}

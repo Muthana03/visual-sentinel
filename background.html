@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Background: from a pixel to a point in space · Visual Sentinel</title>
+<meta name="description" content="The geometry behind Visual Sentinel, explained from scratch: the pinhole camera, intrinsic and extrinsic parameters, rays, triangulation, and the error law that governs all of it.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lato:ital,wght@0,400;0,700;1,400&display=swap">
+<link rel="stylesheet" href="assets/site.css">
+<script>window.MathJax = { tex: { inlineMath: [['\\(', '\\)']], displayMath: [['$$', '$$'], ['\\[', '\\]']] }, svg: { fontCache: 'global' } };</script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-svg.js"></script>
+<script defer src="assets/demos.js"></script>
+</head>
+<body>
+<div id="site">
+  <div id="header">
+    <h1>
+      <a href="index.html" title="Visual Sentinel">Visual Sentinel</a>
+      <span class="byline">&larr; <a href="index.html">optical localization of airborne objects</a></span>
+    </h1>
+    <ul class="nav"><li><a href="index.html">Home</a></li><li><a href="background.html" class="active">Background</a></li><li><a href="method.html">System</a></li><li><a href="approaches.html">Approaches</a></li><li><a href="results.html">Results</a></li><li><a href="simulator.html">Simulator</a></li><li><a href="roadmap.html">Roadmap</a></li><li><a href="about.html">About</a></li></ul>
+  </div>
+  <div id="page" class="article">
+    <h1 class="title">Background: from a pixel to a point in space</h1>
+    <div class="date emphnext">October 2026</div>
+<p class="lead">Everything Visual Sentinel does rests on four ideas: a camera measures angles; a camera that knows its own position and orientation turns an angle into a line in space; two lines meet at a point; and the accuracy of that point depends, above all, on how far apart the cameras stand. This page builds those ideas one at a time. Each has a figure you can drag.</p>
+
+<h2>1. A camera is a protractor</h2>
+
+<p>Forget lenses for a moment and imagine a box with a tiny hole in the front and a sheet of film at the back. Light from a point in the world passes through the hole in a straight line and lands on the film. That is the <em>pinhole camera</em>, and the straight line is the whole secret: the place where a point lands on the film tells you the <em>direction</em> the point lies in, as seen from the hole. The camera does not know how far away the point is; a drone at 40 m and a bird at 4 m on the same line land on the same spot. But it knows the direction, and it knows it precisely.</p>
+
+<p>Put the film at distance \(f\) behind the hole and measure positions on it in pixels. A point at lateral offset \(X\) and depth \(Z\) lands at</p>
+
+<div class="eq">$$ u = f\,\frac{X}{Z} + c_x, \qquad v = f\,\frac{Y}{Z} + c_y, $$</div>
+
+<p>where \((c_x, c_y)\) is the pixel the optical axis passes through, close to the image centre. The number \(f\) is the focal length <em>expressed in pixels</em>: an 18 mm lens on the camera used here gives \(f \approx 3200\) px on a 3840-pixel-wide image, or 1600 px at 1920. Drag the point below and watch the formula.</p>
+
+<div class="demo" data-demo="pinhole"></div>
+<p class="caption">Figure 1. The pinhole camera seen from above. Drag the green point; the red mark is where it lands in the picture. The focal length slider is the zoom: a longer \(f\) narrows the field of view and makes each pixel cover less ground, which is why the 45 mm lens did better than the 18 mm lens at 120 m in the <a href="results.html">field tests</a>.</p>
+
+<p>The three numbers \(f\), \(c_x\), \(c_y\) (strictly, \(f_x\) and \(f_y\) can differ slightly) are the camera's <em>intrinsic parameters</em>. They are usually written as a matrix so that the projection becomes a single multiplication:</p>
+
+<div class="eq">$$ K = \begin{bmatrix} f_x & 0 & c_x \\ 0 & f_y & c_y \\ 0 & 0 & 1 \end{bmatrix}, \qquad \begin{bmatrix} u \\ v \\ 1 \end{bmatrix} \sim K \begin{bmatrix} X \\ Y \\ Z \end{bmatrix}. $$</div>
+
+<p>They are measured once per camera and lens, by photographing a checkerboard from many angles and asking the software which \(K\) best explains where the corners landed. This is <em>calibration</em>. The two cameras in this project calibrated to \(f \approx 3197\) px and \(3199\) px with sub-pixel residuals; the full matrices are on the <a href="method.html">Method</a> page. Real lenses also bend straight lines slightly near the edges; calibration measures that too, and it is removed before anything else happens.</p>
+
+<h2>2. Where the camera is, and where it looks</h2>
+
+<p>The pinhole formula gives a direction <em>relative to the camera</em>: so many pixels left of centre, so many above. To place a drone on a map we need that direction relative to the world, which means we need to know how the camera itself sits in the world. Two more pieces of information do it: the camera's position \(C\) and its orientation \(R\). Together they are the <em>extrinsic parameters</em>.</p>
+
+<h3>Position: GPS, and a flat local map</h3>
+
+<p>GPS reports latitude, longitude and height above the ellipsoid. Those are angles on a sphere, awkward for geometry. Visual Sentinel converts them to a local <em>East–North–Up</em> frame: pick one point on the ground as the origin (station 1's position), and measure everything else in metres east, north and up from there. Over the few hundred metres that matter here the Earth is flat enough that this is exact to centimetres. The answer is converted back to latitude and longitude at the end, so it can be shown on a map.</p>
+
+<h3>Orientation: compass, tilt, and a rotation matrix</h3>
+
+<p>The camera's orientation is three angles. <em>Heading</em> is the compass bearing of the optical axis, clockwise from north. <em>Pitch</em> is how far it tilts up from the horizon. <em>Roll</em> is the twist about the optical axis, which should be zero if the camera is level on its tripod. A magnetometer and accelerometer on the camera bracket measure these. The three angles assemble into a \(3\times 3\) rotation matrix \(R\) whose columns are the camera's <em>right</em>, <em>down</em> and <em>forward</em> axes written in East–North–Up coordinates:</p>
+
+<div class="eq">$$ \mathbf{f} = \begin{bmatrix} \sin h \cos p \\ \cos h \cos p \\ \sin p \end{bmatrix}, \qquad \mathbf{r} = \begin{bmatrix} \cos h \\ -\sin h \\ 0 \end{bmatrix}, \qquad \mathbf{d} = \mathbf{f} \times \mathbf{r}, \qquad R = \big[\,\mathbf{r}\;\;\mathbf{d}\;\;\mathbf{f}\,\big]. $$</div>
+
+<div class="demo" data-demo="frames"></div>
+<p class="caption">Figure 2. Heading and pitch, and the rotation matrix they produce. The last column is the direction the camera looks.</p>
+
+<div class="note">
+<p><strong>A warning from experience.</strong> There are many ways to define these angles (which axis is "forward", whether angles go clockwise, whether the matrix maps camera-to-world or world-to-camera), and every library picks its own. Mixing two conventions produces answers that are confidently wrong. The project's first prototype script had exactly this problem, and nobody could tell from field data alone; it took a simulation with perfectly known geometry to expose it. The <a href="method.html#conventions">Method</a> page fixes one convention for everything.</p>
+</div>
+
+<h3>The ray</h3>
+
+<p>Now a pixel \((u, v)\) becomes a line in the world. First undo the intrinsics to get a direction in the camera's own frame, then rotate it into the world:</p>
+
+<div class="eq">$$ \mathbf{d} = R\,K^{-1} \begin{bmatrix} u \\ v \\ 1 \end{bmatrix}, \qquad \mathbf{r}(t) = C + t\,\mathbf{d}, \quad t > 0. $$</div>
+
+<p>The drone is somewhere on this ray. One camera cannot say where. Two can.</p>
+
+<h2>3. Two rays make a point</h2>
+
+<p>Place a second camera some distance away, aim it so that it also sees the drone, and compute its ray the same way. In a perfect world the two rays intersect, and the intersection is the drone. In the real world they miss each other by a little, because every number that went into them (position, heading, pixel) carries some error. The practical answer is the point halfway along the shortest segment between the two rays, which is what Visual Sentinel's original script computes:</p>
+
+<div class="eq">$$ \hat{P} = \tfrac{1}{2}\big(\mathbf{r}_1(t_1^\ast) + \mathbf{r}_2(t_2^\ast)\big), \qquad (t_1^\ast, t_2^\ast) = \arg\min_{t_1,t_2}\,\lVert \mathbf{r}_1(t_1) - \mathbf{r}_2(t_2) \rVert. $$</div>
+
+<p>The length of that shortest segment, the <em>ray gap</em>, is free diagnostic information: a large gap means something upstream was wrong. There are other ways to combine rays, and they matter once there are more than two cameras or the errors are large: the point closest to all rays at once; the linear "DLT" solution; and a nonlinear refinement that moves the point until it reprojects onto the measured pixels as well as possible. They are compared on the <a href="method.html#solvers">Method</a> page and can be switched live in the <a href="simulator.html">Simulator</a>.</p>
+
+<div class="demo" data-demo="triangulate"></div>
+<p class="caption">Figure 3. The triangulation sandbox, seen from above. Drag the two stations and the green target. Each red dot is one fix computed with the sliders' sensor errors; the black dot is their mean. Try this: leave the errors as they are and move the stations closer together. Then move them apart. Then move the target far away.</p>
+
+<h2>4. Parallel rigs and verged rigs</h2>
+
+<p>There is a special arrangement of two cameras that every textbook starts with: both on one bar, pointing exactly the same way, perpendicular to the bar. Call it the <em>parallel rig</em>. Its charm is that triangulation collapses to one line of arithmetic. A point at depth \(Z\) appears in the two images at horizontal pixel positions that differ by the <em>disparity</em> \(d\), and</p>
+
+<div class="eq">$$ Z = \frac{f\,B}{d}, $$</div>
+
+<p>with \(f\) in pixels and \(B\) the baseline. No angles are needed at all, because the geometry has been built into the hardware. This is how consumer depth cameras work, with baselines of a few centimetres and wide lenses.</p>
+
+<p>It does not survive long lenses. A 210 mm lens on this camera sees only \(6^\circ\) across. If two such cameras 20 m apart both point straight ahead, a drone 100 m away cannot be in both pictures: each camera covers a strip 10 m wide at that range, and the two strips are 20 m apart. The only way to photograph the same drone from both ends of the baseline is to turn each camera toward it. That is a <em>verged</em> rig, and it is what the second-generation Visual Sentinel is. The price is that \(Z = fB/d\) no longer applies: with both cameras aimed at the drone, the drone sits near the centre of both images, the disparity is close to zero, and the formula returns nonsense of arbitrary size. On a verged rig the aim angles carry the information instead:</p>
+
+<div class="eq">$$ Z = \frac{B}{\tan\psi_L - \tan\psi_R}, \qquad X = Z\,\frac{\tan\psi_L + \tan\psi_R}{2}, $$</div>
+
+<p>where \(\psi_L, \psi_R\) are the two cameras' yaw angles measured from the direction perpendicular to the baseline, and the pixel offset of the drone from each image centre adds to the corresponding angle. If the offsets are ignored, this is the <em>angle-only</em> method; if they are included, it is just the two-ray triangulation of section 3 again, written for a rig. The three formulas are one family: the general ray method contains the other two as special cases, and it is the one that is never wrong about the geometry. The <a href="approaches.html">Approaches</a> page lets you run all three on the archive's own configurations.</p>
+
+<h2>5. Why the baseline and the heading matter so much</h2>
+
+<p>The sandbox makes the lesson obvious, and a little geometry explains it. Call the distance between the cameras the <em>baseline</em> \(B\), the distance to the target the <em>range</em> \(Z\), and the error in the relative pointing of the two cameras \(\sigma\) (in radians). The two rays meet at an angle of roughly \(B/Z\). A pointing error of \(\sigma\) slides the intersection along the line of sight by</p>
+
+<div class="eq">$$ \sigma_Z \;\approx\; \frac{Z^2}{B}\,\sigma . $$</div>
+
+<p>Three things are packed into that fraction. The error grows with the <em>square</em> of the range: doubling the distance quadruples the error. It shrinks in proportion to the baseline: cameras twice as far apart are twice as accurate. And it is proportional to the pointing error, where "pointing" includes everything that moves the ray: compass error, tilt error, and the pixel error of the detector divided by the focal length. A 2-pixel detection error at \(f = 3200\) px is \(0.036^\circ\); a hand-held compass is good to perhaps one degree, thirty times worse.</p>
+
+<p>Put numbers in. Two cameras one metre apart, a target 120 m away, and a relative heading error of \(0.05^\circ\) (an excellent result for any compass) give \(\sigma_Z \approx 120^2 \times 0.00087 / 1 \approx 12\) m. The same cameras 46 metres apart give 0.27 m. The table shows what the compass would have to achieve for a 10 % range error, which is why the project moved from a short rigid bar towards widely separated stations.</p>
+
+<div class="tablewrap">
+<table class="neat">
+<caption>Relative heading accuracy needed for a 10 % range error, from the simulator's Monte Carlo study (18 mm lens).</caption>
+<tr><th class="title">baseline</th><th class="title">at 20 m</th><th class="title">at 61 m</th><th class="title">at 120 m</th></tr>
+<tr><td>0.5 m</td><td>0.14°</td><td>0.047°</td><td>0.024°</td></tr>
+<tr><td>1 m</td><td>0.28°</td><td>0.093°</td><td>0.048°</td></tr>
+<tr><td>2 m</td><td>0.56°</td><td>0.19°</td><td>0.095°</td></tr>
+<tr class="hi"><td>46 m</td><td>13°</td><td>4.3°</td><td>2.2°</td></tr>
+</table>
+</div>
+
+<p>This single relationship explains most of the project's <a href="results.html">results</a>, and most of its plans: the move to long baselines, and the interest in measuring orientation from landmarks rather than trusting a compass or a gyroscope (see <a href="roadmap.html">Roadmap</a>). It also says something uncomfortable about the second-generation rig's IMU. A gyroscope measures how fast it turns, so its heading is an integral from an arbitrary starting point: it can report that a camera turned by \(5^\circ\), never that it points \(5^\circ\) left of the baseline's perpendicular. Without a magnetometer or an external reference, the relative heading of the two cameras is simply unknown, and the law above turns any guess into metres.</p>
+
+<h2>Glossary</h2>
+
+<dl>
+  <dt>Intrinsic parameters, \(K\)</dt><dd>Focal length in pixels and the principal point; what the camera does inside. Found by calibration.</dd>
+  <dt>Extrinsic parameters, \(R\) and \(C\)</dt><dd>Where the camera is and how it is oriented in the world. Here they come from GPS and the compass/IMU.</dd>
+  <dt>ENU</dt><dd>East–North–Up: a flat local map in metres, anchored at a chosen latitude and longitude.</dd>
+  <dt>WGS84</dt><dd>The global latitude/longitude/height system GPS reports in.</dd>
+  <dt>Baseline</dt><dd>The distance between the two cameras. Longer is better, until the two views become too different to recognise the same object.</dd>
+  <dt>Ray gap</dt><dd>The shortest distance between the two rays. Zero in theory; a measure of inconsistency in practice.</dd>
+  <dt>Reprojection error</dt><dd>How far the computed 3D point, projected back into each image, lands from the pixel that was actually measured. A quality measure that needs no ground truth.</dd>
+  <dt>IMU</dt><dd>Inertial measurement unit: gyroscope, accelerometer and magnetometer in one package. Used here for heading, pitch and roll.</dd>
+</dl>
+
+<p class="quiet">Further reading: Hartley &amp; Zisserman, <em>Multiple View Geometry in Computer Vision</em>, chapter 12; Zhang, "A flexible new technique for camera calibration", IEEE TPAMI 2000; and Kyle Simek's series <a href="https://ksimek.github.io/2012/08/13/introduction/">Dissecting the Camera Matrix</a>, whose spirit this site borrows.</p>
+    <div class="prev-next"><a href="index.html" class="prev">&larr; Home</a><a href="method.html" class="next">System &rarr;</a></div>
+    <div class="clearer"></div>
+  </div>
+  <div id="footer">
+    <address>
+      <span class="copyright">Content by the Visual Sentinel team, <a href="about.html">German Jordanian University</a>. Design after <a href="http://mark.reid.name/">Mark Reid</a> and <a href="https://ksimek.github.io/">Kyle Simek</a>.</span>
+      <span class="engine">Built with <a href="https://threejs.org/">three.js</a> and <a href="https://www.mathjax.org/">MathJax</a></span>
+    </address>
+  </div>
+</div>
+</body>
+</html>

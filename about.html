@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>About the project · Visual Sentinel</title>
+<meta name="description" content="The people, institution and support behind Visual Sentinel, how to cite the work, and how to reproduce every number on this site.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lato:ital,wght@0,400;0,700;1,400&display=swap">
+<link rel="stylesheet" href="assets/site.css">
+<script>window.MathJax = { tex: { inlineMath: [['\\(', '\\)']], displayMath: [['$$', '$$'], ['\\[', '\\]']] }, svg: { fontCache: 'global' } };</script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-svg.js"></script>
+<script defer src="assets/demos.js"></script>
+</head>
+<body>
+<div id="site">
+  <div id="header">
+    <h1>
+      <a href="index.html" title="Visual Sentinel">Visual Sentinel</a>
+      <span class="byline">&larr; <a href="index.html">optical localization of airborne objects</a></span>
+    </h1>
+    <ul class="nav"><li><a href="index.html">Home</a></li><li><a href="background.html">Background</a></li><li><a href="method.html">System</a></li><li><a href="approaches.html">Approaches</a></li><li><a href="results.html">Results</a></li><li><a href="simulator.html">Simulator</a></li><li><a href="roadmap.html">Roadmap</a></li><li><a href="about.html" class="active">About</a></li></ul>
+  </div>
+  <div id="page" class="article">
+    <h1 class="title">About the project</h1>
+    <div class="date emphnext">October 2026</div>
+<p class="lead">Visual Sentinel began as a senior project in the Department of Computer Engineering and Computer Science at the German Jordanian University, and grew into a funded research platform with two generations of hardware, a field archive, and the simulation work presented here.</p>
+
+<h2>Team</h2>
+
+<dl class="kv">
+  <dt>Students</dt><dd>Muthana Alhawamdeh, Mohammad Yasin, Osama Abbad, Hamza Salameh</dd>
+  <dt>Supervisors</dt><dd>Dr. Abdullah Alfarrarjeh and Dr. Amani Abu Jabal</dd>
+  <dt>Institution</dt><dd>School of Electrical Engineering and Information Technology, German Jordanian University, Amman</dd>
+  <dt>Support</dt><dd>King Abdullah II Fund for Development (KAFD), which financed the stations' hardware and supported the project through procurement and guidance; the second-generation experiments were flown at the KAFD field site</dd>
+  <dt>Collaboration</dt><dd>Jordan Design and Development Bureau (JODDB), for drone flights and controlled tests</dd>
+</dl>
+
+<p>The generation-1 project report, <em>Visual Sentinel</em> (German Jordanian University, 2025), is the source for that generation's hardware description and field campaign. The generation-2 rig, its orchestration software and the 107-experiment archive are the work of the extended team in 2025–2026. The simulator, the solvers and this website were developed to validate both designs and to plan the next phase.</p>
+
+<h2>Citing</h2>
+
+<pre><code>Alhawamdeh, M., Yasin, M., Abbad, O. and Salameh, H. (2026). Visual Sentinel: optical
+localization of airborne objects from calibrated camera pairs. German Jordanian
+University, supervised by A. Alfarrarjeh and A. Abu Jabal. Project site and simulator.</code></pre>
+
+<p>A peer-reviewed publication is in preparation; this page will carry the reference when it appears.</p>
+
+<h2>Reproducing the results</h2>
+
+<p>Everything on this site that is simulated can be rerun. The simulator is a Python package with Blender as the renderer; the interactive viewers and this website are generated from the same scenario files.</p>
+
+<pre><code>pip install numpy opencv-python pyproj scipy pytest
+python -m pytest -q                                       # geometry and solver tests (incl. the rig solvers)
+python -m vsim.run scenarios/rig_verged.json              # Blender twin of the archive's B20 H75 D100 F210 rig
+python experiments/rig_sweep.py                           # Results, Table 1 (verged rig)
+python experiments/noise_sweep.py                         # Results, Table 2 (independent stations)
+python -m vsim.export_viewer scenarios/rig_verged.json    # the interactive simulator page
+python site/build.py                                      # this website</code></pre>
+
+<p>Scenario files are plain JSON: cameras with a position, a <code>look_at</code> point or heading and pitch, and either calibrated \(K\) matrices or a lens focal length; targets with a static position or a flight path. Adding a page to this site is one HTML file and one line in the navigation list; the site is static and can be hosted anywhere.</p>
+
+<h2>Acknowledgements</h2>
+
+<p>The design of these pages follows Mark Reid's stylesheet as used by Kyle Simek, whose articles on the camera matrix taught many people, including the authors, how cameras see. The 3D viewer is built with three.js; equations are set with MathJax.</p>
+    <div class="prev-next"><a href="roadmap.html" class="prev">&larr; Roadmap</a></div>
+    <div class="clearer"></div>
+  </div>
+  <div id="footer">
+    <address>
+      <span class="copyright">Content by the Visual Sentinel team, <a href="about.html">German Jordanian University</a>. Design after <a href="http://mark.reid.name/">Mark Reid</a> and <a href="https://ksimek.github.io/">Kyle Simek</a>.</span>
+      <span class="engine">Built with <a href="https://threejs.org/">three.js</a> and <a href="https://www.mathjax.org/">MathJax</a></span>
+    </address>
+  </div>
+</div>
+</body>
+</html>

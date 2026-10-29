@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Results: what the simulation says · Visual Sentinel</title>
+<meta name="description" content="The digital twin's error budgets for both generations of Visual Sentinel: which error source costs how much, on the geometries that were actually flown, and what that means for the next design.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lato:ital,wght@0,400;0,700;1,400&display=swap">
+<link rel="stylesheet" href="assets/site.css">
+<script>window.MathJax = { tex: { inlineMath: [['\\(', '\\)']], displayMath: [['$$', '$$'], ['\\[', '\\]']] }, svg: { fontCache: 'global' } };</script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-svg.js"></script>
+<script defer src="assets/demos.js"></script>
+</head>
+<body>
+<div id="site">
+  <div id="header">
+    <h1>
+      <a href="index.html" title="Visual Sentinel">Visual Sentinel</a>
+      <span class="byline">&larr; <a href="index.html">optical localization of airborne objects</a></span>
+    </h1>
+    <ul class="nav"><li><a href="index.html">Home</a></li><li><a href="background.html">Background</a></li><li><a href="method.html">System</a></li><li><a href="approaches.html">Approaches</a></li><li><a href="results.html" class="active">Results</a></li><li><a href="simulator.html">Simulator</a></li><li><a href="roadmap.html">Roadmap</a></li><li><a href="about.html">About</a></li></ul>
+  </div>
+  <div id="page" class="article">
+    <h1 class="title">Results: what the simulation says</h1>
+    <div class="date emphnext">October 2026</div>
+<p class="lead">Every number on this page comes from the simulator, where the truth is known exactly and the error sources can be switched on one at a time. That is the only way to answer the question the project kept running into: when a fix is wrong by tens of metres, is it the sensors, the arithmetic, or the geometry? In the field those are entangled. In the twin they are not.</p>
+
+<h2>1. The twin, and why it can be trusted</h2>
+
+<p>A scene is described by camera positions, orientations and intrinsics, and by targets that are static or fly along a path. Blender renders what each camera sees, and the project's own camera model computes where every target should appear. The two agree to 0.0002 px on every run, which is the twin's calibration certificate: if a solver gets the wrong answer on simulated data, the solver is wrong.</p>
+
+<p>With exact inputs, every geometric solver on this site recovers every target to about \(10^{-13}\) m, on both rigs, in every configuration tried. Two things did not pass that test, and both were found this way: the first prototype's orientation convention (<a href="method.html#conventions">System §6</a>), and the parallel-rig disparity formula applied to the verged rig (below). Neither could have been diagnosed from field data alone.</p>
+
+<h2>2. The field campaigns as datasets</h2>
+
+<p>Two campaigns were flown. Their value here is the <em>geometries</em> they cover, which the simulation reproduces configuration by configuration.</p>
+
+<dl class="kv">
+  <dt>Generation 1</dt><dd>Static targets at 4, 10, 20, 61, 80 and 120 m; two cameras 0.5, 1 or 2 m apart on one bar, aimed together; 18 mm and 45 mm lenses; targets selected in the images by hand.</dd>
+  <dt>Generation 2</dt><dd>107 experiments on a design grid: baselines 2, 5, 10, 15, 20 and 30 m; lenses 18, 45, 55, 100, 125, 150 and 210 mm; depths 5 to 200 m; heights 5 to 210 m. A DJI Mavic 3 Pro hovering on the rig's centre axis at a surveyed position, both cameras aimed at it, synchronized 1080p video with IMU and GPS logs per camera.</dd>
+</dl>
+
+<p>The second campaign's grid is the one the simulator is now built around, because it spans the question that matters for a deployable system: how far, with what baseline, through what lens.</p>
+
+<h2>3. The verged rig: what each error source costs</h2>
+
+<p>The table replays archive configurations 2,000 times each with controlled errors, and reports the median 3D error in metres. "Jitter" is noise drawn afresh for every fix, the kind a sensor shows from sample to sample; "bias" is a fixed disagreement between the two cameras' headings for the whole deployment, the quantity a gyroscope-only IMU cannot observe at all. The detector contributes 2 px of jitter throughout.</p>
+
+<div class="tablewrap">
+<table class="neat">
+<caption>Table 1. Median 3D error (m) of the two angle-based solvers on the verged rig, archive configurations (B baseline, H height, D depth, F lens). The parallel-disparity formula is omitted from the body because its result on every row is "no fix" (centred target) or thousands to hundreds of thousands of metres; see the text.</caption>
+<tr><th class="title l">error model</th><th class="title">B2 H20 D20 F45</th><th class="title">B5 H35 D50 F45</th><th class="title">B20 H75 D100 F210</th><th class="title">B20 H125 D150 F150</th><th class="title">B30 H100 D200 F210</th></tr>
+<tr><td class="l">exact</td><td>0.00</td><td>0.00</td><td>0.00</td><td>0.00</td><td>0.00</td></tr>
+<tr><td class="l">detector 2 px</td><td>0.19</td><td>0.37</td><td>0.08</td><td>0.29</td><td>0.18</td></tr>
+<tr><td class="l">+ IMU jitter 0.6° yaw, 0.3° pitch</td><td>2.8</td><td>6.1</td><td>6.3</td><td>14.6</td><td>15.1</td></tr>
+<tr><td class="l">+ 1° heading bias between cameras</td><td>4.2</td><td>8.8</td><td>9.2</td><td>22.0</td><td>22.8</td></tr>
+<tr><td class="l">+ 3° heading bias</td><td>8.9</td><td>19.4</td><td>22.0</td><td>50.2</td><td>53.8</td></tr>
+<tr><td class="l">+ baseline measured ±2 %</td><td>4.3</td><td>9.0</td><td>9.7</td><td>22.0</td><td>23.0</td></tr>
+</table>
+</div>
+
+<p>Three conclusions, in order of importance.</p>
+
+<ol>
+  <li><strong>The parallel-disparity formula does not apply to this rig.</strong> With both cameras aimed at the drone, the disparity is near zero, and \(Z = fB/d\) returns 5,800 m for a drone at 20 m, 232,000 m for the B20 H75 D100 F210 configuration, and no fix at all when the drone is exactly centred. No sensor improvement changes this; the simulator reproduces it with every error set to zero. Any wildly wrong range from this rig is explained before sensors are even considered.</li>
+  <li><strong>The sensors' orientation is the real budget.</strong> With the correct geometry, 2 px of detector jitter costs centimetres. The IMU's sample-to-sample jitter alone costs 3 to 15 m across the grid, and a 1° disagreement between the two cameras' headings doubles that. The error grows with range squared and shrinks with baseline, as the <a href="background.html">error law</a> says: the 30 m baseline at 200 m is no better than the 20 m baseline at 100 m.</li>
+  <li><strong>The baseline measurement is a minor term.</strong> Two percent on a 20 m tape costs about a metre at 100 m, small next to the angles.</li>
+</ol>
+
+<p>Angle-only and angles + pixels agree in the table because the simulated drone hovers exactly on the aim point, as the archive's experiments did. The moment it moves, angle-only inherits the offset while angles + pixels does not; the <a href="approaches.html">rig explorer</a> shows this with its lateral slider.</p>
+
+<h2>4. The independent stations: the same law from the other side</h2>
+
+<p>For the first-generation geometry (two stations with an 18 mm lens, targets at 20, 61 and 120 m) the simulator gives the same picture from the other side of the design space. Here the pointing comes from a compass, and the baseline is short.</p>
+
+<div class="tablewrap">
+<table class="neat">
+<caption>Table 2. Simulated median range error (m) for the generation-1 geometry, 2,000 trials per cell, 2 px of detection jitter throughout; heading noise is the relative error between the two cameras.</caption>
+<tr><th class="title l">error sources</th><th class="title">baseline</th><th class="title">20 m</th><th class="title">61 m</th><th class="title">120 m</th></tr>
+<tr><td class="l" rowspan="3">2 px detection only</td><td>0.5 m</td><td>1.0</td><td>8.9</td><td>33</td></tr>
+<tr><td>1 m</td><td>0.5</td><td>4.6</td><td>18</td></tr>
+<tr><td>2 m</td><td>0.2</td><td>2.3</td><td>8.8</td></tr>
+<tr><td class="l" rowspan="2">+ 0.1° relative heading</td><td>1 m</td><td>0.7</td><td>6.4</td><td>25</td></tr>
+<tr><td>2 m</td><td>0.4</td><td>3.2</td><td>12</td></tr>
+<tr><td class="l" rowspan="2">+ 1° relative heading</td><td>1 m</td><td>4.5</td><td>29 (16 % no fix)</td><td>74 (31 % no fix)</td></tr>
+<tr><td>2 m</td><td>2.3</td><td>20 (3 % no fix)</td><td>56 (17 % no fix)</td></tr>
+<tr><td class="l">7° IMU + 1 m GPS, independent per camera</td><td>2 m</td><td>12 (36 % no fix)</td><td>46 (44 % no fix)</td><td>102 (47 % no fix)</td></tr>
+</table>
+</div>
+
+<p>With a baseline of a metre, even 2 px of pointing error is tens of metres at 120 m, and a compass-grade heading makes the system fail to produce a fix half the time. The stations' freedom of placement is also their remedy: the same cameras 46 m apart, in the <a href="simulator-stations.html">stations simulator</a>, localize a flying drone to about 2 m under a realistic error budget.</p>
+
+<h2>5. The error law, drawn</h2>
+
+<p>All of the above is one relationship, \(\sigma_Z \approx Z^2\sigma/B\). The figure plots it for a chosen baseline and pointing error, over the ranges of both campaigns. It is worth a minute with the sliders: the baseline that makes a 210 mm lens useful at 200 m is tens of metres, and the pointing accuracy that makes any of it useful is a few hundredths of a degree.</p>
+
+<div class="demo" data-demo="errorcurve"></div>
+<p class="caption">Figure 1. Predicted 1-σ range error against range, for the baseline and the relative pointing error set by the sliders. Points are placed at the first-generation campaign's target ranges for reference only.</p>
+
+<h2>6. What we learned</h2>
+
+<ul>
+  <li><strong>Model the hardware you have.</strong> A verged rig needs angle-based triangulation; the parallel formula is a different instrument's equation.</li>
+  <li><strong>Relative pointing is the quantity that matters</strong>, not absolute heading. Two cameras that agree with each other to 0.05° are worth more than two cameras that each know north to 1°. A gyroscope cannot provide this; a magnetometer provides it coarsely; landmarks can provide it well.</li>
+  <li><strong>Baseline is the cheapest accuracy.</strong> Every metre of separation divides the error, and a tape measure is more accurate than any sensor on the rig.</li>
+  <li><strong>The detector sets a floor, and it is low.</strong> A pixel or two of jitter through a long lens is a few centimetres at 100 m.</li>
+  <li><strong>Test on exact data first.</strong> Both mistakes the project has found so far were found in minutes by a simulator with known truth, after months of field data had not shown them.</li>
+</ul>
+    <div class="prev-next"><a href="approaches.html" class="prev">&larr; Approaches</a><a href="simulator.html" class="next">Simulator &rarr;</a></div>
+    <div class="clearer"></div>
+  </div>
+  <div id="footer">
+    <address>
+      <span class="copyright">Content by the Visual Sentinel team, <a href="about.html">German Jordanian University</a>. Design after <a href="http://mark.reid.name/">Mark Reid</a> and <a href="https://ksimek.github.io/">Kyle Simek</a>.</span>
+      <span class="engine">Built with <a href="https://threejs.org/">three.js</a> and <a href="https://www.mathjax.org/">MathJax</a></span>
+    </address>
+  </div>
+</div>
+</body>
+</html>

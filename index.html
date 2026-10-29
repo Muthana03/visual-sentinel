@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Visual Sentinel: seeing where things are · Visual Sentinel</title>
+<meta name="description" content="Visual Sentinel finds the 3D position of a drone from two ordinary cameras that know where they are and where they point. This site explains the idea, the two generations of the system, the approaches, and a simulator that shows exactly where the error comes from.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lato:ital,wght@0,400;0,700;1,400&display=swap">
+<link rel="stylesheet" href="assets/site.css">
+<script>window.MathJax = { tex: { inlineMath: [['\\(', '\\)']], displayMath: [['$$', '$$'], ['\\[', '\\]']] }, svg: { fontCache: 'global' } };</script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-svg.js"></script>
+<script defer src="assets/demos.js"></script>
+</head>
+<body>
+<div id="site">
+  <div id="header">
+    <h1>
+      <a href="index.html" title="Visual Sentinel">Visual Sentinel</a>
+      <span class="byline">&larr; <a href="index.html">optical localization of airborne objects</a></span>
+    </h1>
+    <ul class="nav"><li><a href="index.html" class="active">Home</a></li><li><a href="background.html">Background</a></li><li><a href="method.html">System</a></li><li><a href="approaches.html">Approaches</a></li><li><a href="results.html">Results</a></li><li><a href="simulator.html">Simulator</a></li><li><a href="roadmap.html">Roadmap</a></li><li><a href="about.html">About</a></li></ul>
+  </div>
+  <div id="page" class="article">
+    <h1 class="title">Visual Sentinel: seeing where things are</h1>
+    <div class="date emphnext">October 2026</div>
+<figure class="hero">
+<svg viewBox="0 0 680 270" width="680" height="270" role="img" aria-label="Two camera stations on the ground look at a drone; their lines of sight cross at the drone.">
+  <defs>
+    <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#777"/></marker>
+  </defs>
+  <rect x="0" y="0" width="680" height="270" fill="#fff"/>
+  <line x1="20" y1="232" x2="660" y2="232" stroke="#999" stroke-width="1.2"/>
+  <g stroke="#ddd" stroke-width="1"><line x1="20" y1="244" x2="660" y2="244"/><line x1="20" y1="256" x2="660" y2="256"/></g>
+  <line x1="118" y1="200" x2="372" y2="62" stroke="#d97706" stroke-width="1.6" stroke-dasharray="6 4"/>
+  <line x1="556" y1="186" x2="372" y2="62" stroke="#7c3aed" stroke-width="1.6" stroke-dasharray="6 4"/>
+  <g transform="translate(118,200)">
+    <line x1="0" y1="0" x2="-16" y2="32" stroke="#555" stroke-width="2"/><line x1="0" y1="0" x2="16" y2="32" stroke="#555" stroke-width="2"/><line x1="0" y1="0" x2="0" y2="32" stroke="#555" stroke-width="2"/>
+    <rect x="-13" y="-16" width="26" height="16" rx="2" fill="#333"/><circle cx="12" cy="-8" r="5" fill="#111" stroke="#d97706" stroke-width="2"/>
+    <rect x="-9" y="-24" width="12" height="6" rx="1" fill="#d97706"/>
+  </g>
+  <g transform="translate(556,186)">
+    <line x1="0" y1="0" x2="-16" y2="46" stroke="#555" stroke-width="2"/><line x1="0" y1="0" x2="16" y2="46" stroke="#555" stroke-width="2"/><line x1="0" y1="0" x2="0" y2="46" stroke="#555" stroke-width="2"/>
+    <rect x="-13" y="-16" width="26" height="16" rx="2" fill="#333"/><circle cx="-12" cy="-8" r="5" fill="#111" stroke="#7c3aed" stroke-width="2"/>
+    <rect x="-3" y="-24" width="12" height="6" rx="1" fill="#7c3aed"/>
+  </g>
+  <g transform="translate(372,62)">
+    <rect x="-9" y="-4" width="18" height="8" rx="3" fill="#222"/>
+    <line x1="-22" y1="-10" x2="22" y2="10" stroke="#222" stroke-width="2"/><line x1="-22" y1="10" x2="22" y2="-10" stroke="#222" stroke-width="2"/>
+    <ellipse cx="-22" cy="-10" rx="9" ry="2.5" fill="#888"/><ellipse cx="22" cy="10" rx="9" ry="2.5" fill="#888"/><ellipse cx="-22" cy="10" rx="9" ry="2.5" fill="#888"/><ellipse cx="22" cy="-10" rx="9" ry="2.5" fill="#888"/>
+    <circle cx="0" cy="0" r="16" fill="none" stroke="#15803d" stroke-width="1.5" stroke-dasharray="3 3"/>
+  </g>
+  <g font-family="Lato, Helvetica Neue, Arial, sans-serif" font-size="12" fill="#444">
+    <text x="118" y="258" text-anchor="middle">camera 1: position + pointing known</text>
+    <text x="556" y="258" text-anchor="middle">camera 2: position + pointing known</text>
+    <text x="372" y="34" text-anchor="middle">the two lines of sight cross here</text>
+    <text x="230" y="118" fill="#b45309" transform="rotate(-28 230 118)">line of sight 1</text>
+    <text x="500" y="110" fill="#6d28d9" transform="rotate(34 500 110)">line of sight 2</text>
+    <line x1="372" y1="40" x2="372" y2="50" stroke="#777" marker-end="url(#arr)"/>
+  </g>
+</svg>
+<figcaption>The whole idea in one picture. Each camera turns the pixel where it sees the drone into a line of sight, because it knows where it stands and where it is pointing. Two lines of sight meet at one point in space: the drone's position. Everything else on this site is about how well that point can be known.</figcaption>
+</figure>
+
+<p class="lead">Small drones and balloons are cheap, quiet and increasingly common, and they are awkward for the systems built to watch the sky. Radar was designed for large, fast, metallic aircraft; a plastic quadcopter at low altitude returns almost nothing, and the radars that can see it are expensive to buy and to run. Visual Sentinel asks a simpler question: <em>if two ordinary cameras can both see the object, do we already know where it is?</em></p>
+
+<p>The answer is yes, provided each camera knows two things about itself: where it is, and which way it is looking. With those, the pixel where the drone appears becomes a line through space, and two such lines, from two cameras standing some distance apart, cross at the drone. The method is older than photography: surveyors have used it to place mountain peaks for centuries. Visual Sentinel applies it with commodity hardware, and the interesting part turns out to be the second condition. Knowing <em>where</em> a camera stands is easy. Knowing where it <em>points</em>, to a hundredth of a degree, is the whole problem.</p>
+
+<h2>Two generations, one geometry</h2>
+
+<p>The project built the idea twice. The first generation used two independent <em>stations</em>, each a camera with its own GPS receiver and compass, placed anywhere and pointed at the sky. The second generation put two cameras on a measured baseline, 2 to 30 metres apart, with long lenses, both aimed at the target, and recorded 107 structured experiments with a drone at known positions out to 200 metres. The two designs share the same mathematics and differ in what they ask of the sensors, which is exactly what makes them worth comparing side by side.</p>
+
+<p>This site is the project's public home, written to be read from the top by someone who has never heard of a camera matrix. Its centrepiece is a <em>simulator</em>: a digital twin of either rig in which every quantity is known exactly, so that the error sources can be switched on one at a time. In a perfect world the methods are perfect, as the simulator confirms to a trillionth of a metre. The question the site answers is what each imperfection costs, and which approach survives it.</p>
+
+<ul class="toc">
+  <li><a href="background.html">Background</a>: a camera is a protractor; how a pixel becomes a ray; how two rays become a point; parallel rigs versus verged rigs; and the error law that governs all of it.</li>
+  <li><a href="method.html">System</a>: both generations of hardware, their calibration, and the conventions that keep the geometry honest.</li>
+  <li><a href="approaches.html">Approaches</a>: six ways to turn two views into a position, what each assumes, and a rig explorer to try them on the archive's own geometries.</li>
+  <li><a href="results.html">Results</a>: what the simulation says about every error source, on the geometries that were flown.</li>
+  <li><a href="simulator.html">Simulator</a>: the interactive 3D twin. Scrub the flight, switch solvers, add sensor errors, watch the estimate drift.</li>
+  <li><a href="roadmap.html">Roadmap</a>: measuring the real error budget, more cameras, and estimating trajectories rather than positions.</li>
+  <li><a href="about.html">About</a>: the team, the institution, the support, and how to reproduce everything here.</li>
+</ul>
+
+<h2>The project in numbers</h2>
+
+<dl class="kv">
+  <dt>Generation 1</dt><dd>Independent stations: Canon EOS R10, Raspberry Pi 5, u-blox NEO-M8N GPS, Pololu MinIMU-9 compass/IMU; static tests from 4 m to 120 m</dd>
+  <dt>Generation 2</dt><dd>Verged rig: two R10 bodies on a measured 2–30 m baseline, lenses 18–210 mm, Raspberry Pi 4 and MPU-6050 IMU per camera, synchronized capture; 107 experiments on a design grid out to 200 m</dd>
+  <dt>Simulation</dt><dd>A Blender digital twin whose camera model agrees with Blender to 0.0002 px; six solvers; Monte Carlo error budgets for both rigs</dd>
+  <dt>Institution</dt><dd>German Jordanian University, Department of Computer Engineering and Computer Science</dd>
+  <dt>Support</dt><dd>King Abdullah II Fund for Development (KAFD); field collaboration with JODDB</dd>
+</dl>
+
+<div class="note">
+<p><strong>Where to start.</strong> If you have ten minutes, read <a href="background.html">Background</a> and drag the triangulation sandbox there. If you have one, open the <a href="simulator.html">Simulator</a>, switch the solver to <em>parallel disparity</em> and watch the fix leave the planet; then switch back to <em>angles + pixels</em> and press <em>IMU jitter</em>.</p>
+</div>
+
+<p><a class="cta" href="background.html">Start with the background &rarr;</a> <a class="cta" href="simulator.html">Open the simulator &rarr;</a></p>
+    <div class="prev-next"><a href="background.html" class="next">Background &rarr;</a></div>
+    <div class="clearer"></div>
+  </div>
+  <div id="footer">
+    <address>
+      <span class="copyright">Content by the Visual Sentinel team, <a href="about.html">German Jordanian University</a>. Design after <a href="http://mark.reid.name/">Mark Reid</a> and <a href="https://ksimek.github.io/">Kyle Simek</a>.</span>
+      <span class="engine">Built with <a href="https://threejs.org/">three.js</a> and <a href="https://www.mathjax.org/">MathJax</a></span>
+    </address>
+  </div>
+</div>
+</body>
+</html>

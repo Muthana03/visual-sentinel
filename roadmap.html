@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Roadmap · Visual Sentinel</title>
+<meta name="description" content="Where Visual Sentinel goes next: measuring the rig's real error budget, better orientation, more cameras, real-time operation, and from positions to trajectories, including predicting where an object will land.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lato:ital,wght@0,400;0,700;1,400&display=swap">
+<link rel="stylesheet" href="assets/site.css">
+<script>window.MathJax = { tex: { inlineMath: [['\\(', '\\)']], displayMath: [['$$', '$$'], ['\\[', '\\]']] }, svg: { fontCache: 'global' } };</script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-svg.js"></script>
+<script defer src="assets/demos.js"></script>
+</head>
+<body>
+<div id="site">
+  <div id="header">
+    <h1>
+      <a href="index.html" title="Visual Sentinel">Visual Sentinel</a>
+      <span class="byline">&larr; <a href="index.html">optical localization of airborne objects</a></span>
+    </h1>
+    <ul class="nav"><li><a href="index.html">Home</a></li><li><a href="background.html">Background</a></li><li><a href="method.html">System</a></li><li><a href="approaches.html">Approaches</a></li><li><a href="results.html">Results</a></li><li><a href="simulator.html">Simulator</a></li><li><a href="roadmap.html" class="active">Roadmap</a></li><li><a href="about.html">About</a></li></ul>
+  </div>
+  <div id="page" class="article">
+    <h1 class="title">Roadmap</h1>
+    <div class="date emphnext">October 2026</div>
+<p class="lead">The simulator has turned a vague question ("why are the numbers off?") into a list of specific quantities with known consequences. The roadmap is the list of those quantities, in the order they should be measured and reduced, followed by what becomes possible once they are.</p>
+
+<h2>Done</h2>
+
+<ul>
+  <li><span class="badge measured">done</span> Phone prototype: GPS and orientation in photo metadata, manual target selection, midpoint triangulation.</li>
+  <li><span class="badge measured">done</span> Generation 1: calibrated R10 stations with dedicated GPS and IMU modules, static tests to 120 m.</li>
+  <li><span class="badge measured">done</span> Generation 2: the verged rig with long lenses, synchronized capture through a field orchestrator, and a 107-experiment archive to 200 m.</li>
+  <li><span class="badge simulated">done</span> Blender digital twin verified to 0.0002 px; six solvers; Monte Carlo error budgets for both rigs; the parallel-versus-verged diagnosis.</li>
+  <li><span class="badge simulated">done</span> Interactive simulator and rig explorer with bias and jitter error models.</li>
+</ul>
+
+<h2>Next: measure the real error budget</h2>
+
+<p>The simulator's presets are informed guesses: a 0.6° yaw jitter and a 0.3° pitch jitter are the sample-to-sample scatter visible in the rig's logged IMU streams, and the heading bias is a free parameter because nothing on the rig can measure it. The first job is to replace guesses with measurements, so that the tables on the <a href="results.html">Results</a> page become predictions that a field test can confirm or refute.</p>
+
+<dl>
+  <dt>IMU characterization</dt><dd>Log each MPU-6050 for ten minutes while the camera is clamped still: that gives the jitter and the drift rate directly. Then rotate the camera through surveyed angles: that gives the scale error. These are afternoon experiments with a tripod and a protractor.</dd>
+  <dt>Relative heading from a landmark</dt><dd>Both cameras photograph the same distant object whose position is surveyed once. The pixel where it appears in each image, together with \(K\), gives each camera's aim angle relative to the landmark, and the difference is the relative heading, to a hundredth of a degree. This is the classic resection of surveying, and it removes the gyroscope's unknown zero entirely.</dd>
+  <dt>A field test designed to be predicted</dt><dd>Fly the archive's B20 H75 D100 F210 configuration again with the landmark procedure, and compare the raw fix error with Table 1. If it lands in the predicted band, the twin is validated end to end; if not, the gap is the next thing to understand.</dd>
+</dl>
+
+<h2>Then: a live system</h2>
+
+<dl>
+  <dt>Streaming and synchronization</dt><dd>Frames from both cameras arrive at the workstation with hardware timestamps; detection and triangulation run as a pipeline. Target: one to two seconds from capture to position on the map. The risk is timing, not computation: triangulation takes microseconds, detection milliseconds on a GPU, but a frame of misalignment between cameras is half a metre at drone speeds.</dd>
+  <dt>A third camera</dt><dd>Redundancy against missed detections, and geometry that no single pair can give. The N-ray solvers are already written and tested.</dd>
+  <dt>Real flights with ground truth</dt><dd>Flights recorded with the drone's own GPS log as truth, in cooperation with JODDB. This gives the first end-to-end accuracy figure on a moving target, and the detector its fine-tuning data.</dd>
+</dl>
+
+<h2>Then: from positions to trajectories</h2>
+
+<p>A sequence of fixes is more than a sequence of points. An object moving through the air obeys physics, and a filter that knows the physics can smooth the fixes, fill the gaps between them, and predict ahead. The simplest useful model keeps a position and a velocity and assumes the velocity changes slowly; a Kalman filter then weighs each new fix against the prediction. The second-generation codebase already contains such a filter, written for live monitoring; the plan is to drive it from the simulator's fixes, where its predictions can be scored against a known future.</p>
+
+<p>For a <em>ballistic</em> object (a thrown or launched projectile with no propulsion) the model is stronger: after launch the only acceleration is gravity, so a few fixes determine the entire remaining flight,</p>
+
+<div class="eq">$$ \mathbf{p}(t) = \mathbf{p}_0 + \mathbf{v}_0\,t + \tfrac{1}{2}\,\mathbf{g}\,t^2, \qquad t^\ast = \frac{v_{0z} + \sqrt{v_{0z}^2 + 2 g z_0}}{g}, $$</div>
+
+<p>where \(t^\ast\) is the time until the object reaches the ground and \(\mathbf{p}(t^\ast)\) is where it lands. The simulator is built so that the target can be a trajectory rather than a drone: the same cameras, the same rays, the same solvers, with a path defined by launch velocity and gravity (and, later, drag). The questions to answer are how many fixes, at what rate and accuracy, are needed to predict the landing point to a given radius, and how early in the flight that prediction is available.</p>
+
+<ul>
+  <li><span class="badge planned">planned</span> Constant-velocity Kalman filter over simulated fixes; track smoothing and prediction between fixes.</li>
+  <li><span class="badge planned">planned</span> Ballistic target in the simulator; landing-point estimate with uncertainty, updated at every fix.</li>
+  <li><span class="badge planned">planned</span> Multiple simultaneous targets: deciding which detection in camera 2 belongs to which detection in camera 1.</li>
+  <li><span class="badge planned">planned</span> Interface to an interception or alerting system: position, velocity, predicted path and confidence, in a standard message format.</li>
+</ul>
+
+<h2>Beyond</h2>
+
+<p>Thermal cameras would extend the system to night. Pan–tilt mounts with encoders would let a narrow lens follow a target across the sky while keeping the pointing known to the encoder's resolution, which turns the orientation problem from a sensing problem into a mechanical one. And the whole chain, from calibration through solvers to prediction, applies to any object visible from two places: birds, aircraft, weather balloons, vehicles on a road. Visual Sentinel is a drone localizer first, and a general-purpose instrument for seeing where things are second.</p>
+    <div class="prev-next"><a href="simulator.html" class="prev">&larr; Simulator</a><a href="about.html" class="next">About &rarr;</a></div>
+    <div class="clearer"></div>
+  </div>
+  <div id="footer">
+    <address>
+      <span class="copyright">Content by the Visual Sentinel team, <a href="about.html">German Jordanian University</a>. Design after <a href="http://mark.reid.name/">Mark Reid</a> and <a href="https://ksimek.github.io/">Kyle Simek</a>.</span>
+      <span class="engine">Built with <a href="https://threejs.org/">three.js</a> and <a href="https://www.mathjax.org/">MathJax</a></span>
+    </address>
+  </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>The system: two generations · Visual Sentinel</title>
+<meta name="description" content="How Visual Sentinel is built, in both of its generations: independent GPS-and-compass stations, then a verged two-camera rig with long lenses on a measured baseline; the calibration, the data flow, and the conventions that keep the geometry consistent.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lato:ital,wght@0,400;0,700;1,400&display=swap">
+<link rel="stylesheet" href="assets/site.css">
+<script>window.MathJax = { tex: { inlineMath: [['\\(', '\\)']], displayMath: [['$$', '$$'], ['\\[', '\\]']] }, svg: { fontCache: 'global' } };</script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-svg.js"></script>
+<script defer src="assets/demos.js"></script>
+</head>
+<body>
+<div id="site">
+  <div id="header">
+    <h1>
+      <a href="index.html" title="Visual Sentinel">Visual Sentinel</a>
+      <span class="byline">&larr; <a href="index.html">optical localization of airborne objects</a></span>
+    </h1>
+    <ul class="nav"><li><a href="index.html">Home</a></li><li><a href="background.html">Background</a></li><li><a href="method.html" class="active">System</a></li><li><a href="approaches.html">Approaches</a></li><li><a href="results.html">Results</a></li><li><a href="simulator.html">Simulator</a></li><li><a href="roadmap.html">Roadmap</a></li><li><a href="about.html">About</a></li></ul>
+  </div>
+  <div id="page" class="article">
+    <h1 class="title">The system: two generations</h1>
+    <div class="date emphnext">October 2026</div>
+<p class="lead">Both generations of Visual Sentinel do the same thing with the same mathematics: two cameras see a drone, each turns its pixel into a line of sight, and the lines are intersected. They differ in how the cameras learn their own position and pointing, and that difference decides everything about their accuracy.</p>
+
+<figure>
+<svg viewBox="0 0 680 150" width="680" height="150" role="img" aria-label="Pipeline: capture, detect, ray, triangulate, East-North-Up, map.">
+  <defs><marker id="pa" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#888"/></marker></defs>
+  <rect width="680" height="150" fill="#fff"/>
+  <g font-family="Lato, Helvetica Neue, Arial, sans-serif" font-size="12" text-anchor="middle">
+    <g transform="translate(8,40)"><rect width="96" height="54" rx="4" fill="#f7f7ff" stroke="#99c"/><text x="48" y="22" fill="#333" font-weight="bold">capture</text><text x="48" y="40" fill="#666" font-size="10.5">frame + pose sensors</text></g>
+    <g transform="translate(124,40)"><rect width="96" height="54" rx="4" fill="#f7f7ff" stroke="#99c"/><text x="48" y="22" fill="#333" font-weight="bold">detect</text><text x="48" y="40" fill="#666" font-size="10.5">pixel (u, v)</text></g>
+    <g transform="translate(240,40)"><rect width="96" height="54" rx="4" fill="#f7f7ff" stroke="#99c"/><text x="48" y="22" fill="#333" font-weight="bold">ray</text><text x="48" y="40" fill="#666" font-size="10.5">C + t · R K⁻¹ [u v 1]</text></g>
+    <g transform="translate(356,40)"><rect width="96" height="54" rx="4" fill="#fff7ee" stroke="#d97706"/><text x="48" y="22" fill="#333" font-weight="bold">triangulate</text><text x="48" y="40" fill="#666" font-size="10.5">two+ rays → point</text></g>
+    <g transform="translate(472,40)"><rect width="96" height="54" rx="4" fill="#f7f7ff" stroke="#99c"/><text x="48" y="22" fill="#333" font-weight="bold">ENU → WGS84</text><text x="48" y="40" fill="#666" font-size="10.5">metres → lat, lon, alt</text></g>
+    <g transform="translate(588,40)"><rect width="84" height="54" rx="4" fill="#eef7ee" stroke="#15803d"/><text x="42" y="22" fill="#333" font-weight="bold">map</text><text x="42" y="40" fill="#666" font-size="10.5">track, alert</text></g>
+    <g stroke="#888" stroke-width="1.3" marker-end="url(#pa)"><line x1="104" y1="67" x2="122" y2="67"/><line x1="220" y1="67" x2="238" y2="67"/><line x1="336" y1="67" x2="354" y2="67"/><line x1="452" y1="67" x2="470" y2="67"/><line x1="568" y1="67" x2="586" y2="67"/></g>
+    <text x="56" y="122" fill="#999" font-size="11">per camera</text>
+    <text x="404" y="122" fill="#999" font-size="11">central workstation</text>
+    <line x1="8" y1="108" x2="336" y2="108" stroke="#ddd"/><line x1="356" y1="108" x2="672" y2="108" stroke="#ddd"/>
+  </g>
+</svg>
+<figcaption>The pipeline, common to both generations. Each camera captures a frame together with its pose sensors; a detector finds the object; the pixel becomes a ray; the rays are combined into one point, which is finally expressed as latitude, longitude and altitude.</figcaption>
+</figure>
+
+<h2>1. Generation 1: independent stations</h2>
+
+<p>The first design treats each camera as a self-contained station that can be put down anywhere. It learns its position from GPS and its pointing from a compass and tilt sensor, so two stations need no physical connection and no measured distance between them; they can stand on different rooftops.</p>
+
+<dl class="kv">
+  <dt>Camera</dt><dd>Canon EOS R10 with an 18–45 mm lens, used at 18 mm (wide, short range) and 45 mm (narrow, long range)</dd>
+  <dt>Computer</dt><dd>Raspberry Pi 5 on a wired LAN with a static IP; timestamps and logs everything and ships it to the workstation</dd>
+  <dt>Position</dt><dd>u-blox NEO-M8N GPS over UART, parsed by <code>gpsd</code>, logged at 1 Hz as JSON lines; in open sky a 3D fix with HDOP below 1.0, roughly metre-level</dd>
+  <dt>Orientation</dt><dd>Pololu MinIMU-9 v5 (gyroscope, accelerometer, magnetometer) over I²C through RTIMULib at up to 300 Hz, calibrated by an ellipsoid fit of the magnetometer</dd>
+</dl>
+
+<div class="tablewrap">
+<table class="neat">
+<caption>Generation-1 orientation sensor before and after calibration. Even after calibration the residual is several degrees, which the <a href="background.html">error law</a> turns into tens of metres at range: the reason orientation, not GPS, is the bottleneck.</caption>
+<tr><th class="title l">parameter</th><th class="title">before</th><th class="title">after (RTIMULib)</th></tr>
+<tr><td class="l">magnetic offset range</td><td>±30 µT</td><td>±5 µT</td></tr>
+<tr><td class="l">yaw drift over 1 min</td><td>~20°</td><td>&lt; 8°</td></tr>
+<tr><td class="l">orientation noise (RMS)</td><td>12°</td><td>7°</td></tr>
+</table>
+</div>
+
+<p>Static tests with this generation placed balloons, a pillar, a rock and a building wall at 4 to 120 m, with the two cameras 0.5 to 2 m apart on one bar and aimed together. Those tests established the workflow end to end; what they say about accuracy is discussed under <a href="results.html">Results</a>.</p>
+
+<h2>2. Generation 2: the verged rig</h2>
+
+<p>The second design trades freedom of placement for geometry. Two cameras sit on a <em>measured</em> baseline, 2 to 30 metres, so the distance between them is known to a tape measure rather than to GPS. Long lenses extend the reach to 200 metres. Because a long lens sees only a few degrees, both cameras are physically aimed at the target (the rig is <em>verged</em>, see <a href="background.html">Background §4</a>), and the aim angles become the quantities that matter.</p>
+
+<dl class="kv">
+  <dt>Cameras</dt><dd>Two Canon EOS R10 bodies, lenses from 18 to 210 mm; synchronized 1920 × 1080 video</dd>
+  <dt>Per camera</dt><dd>Raspberry Pi 4, MPU-6050 IMU (gyroscope and accelerometer, no magnetometer), GPS module</dd>
+  <dt>Orchestration</dt><dd>A C command-line tool on the operator's laptop scans the network, configures both Pis over SSH, triggers synchronized recording, verifies that both clips arrived, and names them so the geometry travels with the file: <code>B20H75D100F210</code> is a 20 m baseline, 75 m height, 100 m depth, 210 mm lens</dd>
+  <dt>Target</dt><dd>DJI Mavic 3 Pro, hovering at a surveyed position on the rig's centre axis</dd>
+  <dt>Archive</dt><dd>107 experiments: baselines 2, 5, 10, 15, 20 and 30 m; lenses 18, 45, 55, 100, 125, 150 and 210 mm; depths 5–200 m; heights 5–210 m</dd>
+</dl>
+
+<p>Three estimators were implemented for this rig: angle-only triangulation from the two IMUs, the parallel-rig disparity formula, and a learned regression. They, and what the simulation says about each, are the subject of the <a href="approaches.html">Approaches</a> and <a href="results.html">Results</a> pages.</p>
+
+<h2>3. Calibration</h2>
+
+<p>Each camera body was calibrated with OpenCV and a printed checkerboard, because two lenses of the same model are never identical. At 3840 × 2160 the results were</p>
+
+<div class="eq">$$ K_1 = \begin{bmatrix} 3196.65 & 0 & 1894.89 \\ 0 & 3201.16 & 1130.70 \\ 0 & 0 & 1 \end{bmatrix}, \qquad K_2 = \begin{bmatrix} 3199.18 & 0 & 1917.65 \\ 0 & 3200.87 & 1129.09 \\ 0 & 0 & 1 \end{bmatrix}, $$</div>
+
+<p>with sub-pixel reprojection residuals. The principal points sit about 25 px from the sensor centre and differ between the two bodies; assuming the centre instead would put a \(0.4^\circ\) bias on every ray. For the long lenses of the second generation, the focal length in pixels follows from the lens and the sensor width (\(f = F/22.2\,\mathrm{mm} \times 1920\)): 210 mm gives 18,160 px, so one pixel is \(0.003^\circ\). The optics are not the limit.</p>
+
+<h2>4. Detection</h2>
+
+<p>Both generations find the drone in each frame with a YOLOv8 detector, trained on public drone imagery and later fine-tuned on the archive. For the purposes of this site the detector is a black box that returns the centre of a bounding box with a jitter of a pixel or two; the simulator models exactly that and nothing more. Detection quality is a topic for a later page.</p>
+
+<h2>5. Timing</h2>
+
+<p>Both rigs record first and localize afterwards. Moving to live operation changes little in the mathematics and a great deal in the plumbing: the two cameras' frames must correspond to the same instant. A drone at 15 m/s moves half a metre between consecutive video frames, so one frame of offset between the cameras is already a half-metre error before any geometry is done. The second-generation orchestrator triggers both cameras together for this reason, and the simulator has a slider for the residual lag.</p>
+
+<h2 id="conventions">6. One convention for everything</h2>
+
+<p>Geometry code fails quietly when two parts disagree about what an angle means. The simulator, the solvers and the viewer on this site use one set of definitions and test them against each other:</p>
+
+<dl class="kv">
+  <dt>World frame</dt><dd>East–North–Up in metres, anchored at a WGS84 point. For the rig, the baseline runs along \(x\) and the drone sits along \(+y\).</dd>
+  <dt>Camera frame</dt><dd>OpenCV's: \(x\) to the right in the image, \(y\) down, \(z\) forward along the optical axis.</dd>
+  <dt>Orientation</dt><dd>Heading is a compass bearing (0° north, 90° east); pitch is the elevation of the optical axis; roll is about the optical axis. In the rig frame the same angles are reported as yaw from the baseline's perpendicular and pitch above the horizontal, which is how the archive records them.</dd>
+  <dt>Pixels</dt><dd>The centre of the top-left pixel is \((0, 0)\), as in OpenCV; square pixels, since 1080p video reads the sensor's full width.</dd>
+</dl>
+
+<p>The Blender twin checks these conventions on every run by projecting each target through Blender's own camera and through the project's camera model; the two agree to 0.0002 px. The same check is what caught a convention mismatch in the first prototype script, which had treated the compass angles as if the camera looked upward at zero heading. Field data had not revealed it, because the cameras had been aimed by hand on a short bar; the bug showed only when the cameras were far apart and pointed in different directions. The same discipline, applied to the second generation, is what separates the parallel-rig formula from the verged-rig geometry on the <a href="approaches.html">Approaches</a> page.</p>
+
+<h2>7. How the system grew</h2>
+
+<ol>
+  <li><strong>Phone prototype.</strong> An Android app stored GPS and orientation in each photo's metadata; a script read two photos, let the user click the target, and triangulated. The phone's sensors were too noisy and the camera uncalibrated, but the pipeline worked end to end.</li>
+  <li><strong>Generation 1.</strong> Calibrated R10 stations with dedicated GPS and IMU modules on Raspberry Pi 5; static tests to 120 m.</li>
+  <li><strong>Generation 2.</strong> The verged rig with long lenses, synchronized capture, and the 107-experiment archive out to 200 m, with angle-based, disparity-based and learned estimators.</li>
+  <li><strong>Simulation.</strong> A Blender twin with exact ground truth, six solvers, and Monte Carlo error budgets for both rigs: the basis of every number on this site.</li>
+  <li><strong>Next.</strong> Measuring the real error budget, more cameras, and trajectories (see <a href="roadmap.html">Roadmap</a>).</li>
+</ol>
+    <div class="prev-next"><a href="background.html" class="prev">&larr; Background</a><a href="approaches.html" class="next">Approaches &rarr;</a></div>
+    <div class="clearer"></div>
+  </div>
+  <div id="footer">
+    <address>
+      <span class="copyright">Content by the Visual Sentinel team, <a href="about.html">German Jordanian University</a>. Design after <a href="http://mark.reid.name/">Mark Reid</a> and <a href="https://ksimek.github.io/">Kyle Simek</a>.</span>
+      <span class="engine">Built with <a href="https://threejs.org/">three.js</a> and <a href="https://www.mathjax.org/">MathJax</a></span>
+    </address>
+  </div>
+</div>
+</body>
+</html>

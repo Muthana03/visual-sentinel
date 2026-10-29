@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Approaches: six ways to turn two views into a position · Visual Sentinel</title>
+<meta name="description" content="The estimators Visual Sentinel has used or considered, what each one assumes, where its error comes from, and a rig explorer to try them on the archive's own geometries. Also how optical triangulation compares with radar, radio and acoustic sensing.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lato:ital,wght@0,400;0,700;1,400&display=swap">
+<link rel="stylesheet" href="assets/site.css">
+<script>window.MathJax = { tex: { inlineMath: [['\\(', '\\)']], displayMath: [['$$', '$$'], ['\\[', '\\]']] }, svg: { fontCache: 'global' } };</script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-svg.js"></script>
+<script defer src="assets/demos.js"></script>
+</head>
+<body>
+<div id="site">
+  <div id="header">
+    <h1>
+      <a href="index.html" title="Visual Sentinel">Visual Sentinel</a>
+      <span class="byline">&larr; <a href="index.html">optical localization of airborne objects</a></span>
+    </h1>
+    <ul class="nav"><li><a href="index.html">Home</a></li><li><a href="background.html">Background</a></li><li><a href="method.html">System</a></li><li><a href="approaches.html" class="active">Approaches</a></li><li><a href="results.html">Results</a></li><li><a href="simulator.html">Simulator</a></li><li><a href="roadmap.html">Roadmap</a></li><li><a href="about.html">About</a></li></ul>
+  </div>
+  <div id="page" class="article">
+    <h1 class="title">Approaches: six ways to turn two views into a position</h1>
+    <div class="date emphnext">October 2026</div>
+<p class="lead">Given two cameras that both see the drone, there is more than one way to compute where it is. Each way makes an assumption about the hardware, and each is exact when its assumption holds. The point of comparing them in a simulator is to see what happens when it does not.</p>
+
+<h2>1. The estimators</h2>
+
+<div class="tablewrap">
+<table class="neat">
+<tr><th class="title l">approach</th><th class="title l">inputs</th><th class="title l">assumes</th><th class="title l">exact when</th><th class="title">status</th></tr>
+<tr><td class="l"><strong>Two rays from pose</strong> (generation 1)</td><td class="l">each camera's GPS position, heading/pitch/roll, calibrated \(K\), detected pixel</td><td class="l">nothing about the arrangement; cameras can be anywhere</td><td class="l">always, given the inputs</td><td><span class="badge measured">built</span> <span class="badge simulated">simulated</span></td></tr>
+<tr><td class="l"><strong>Angles + pixels</strong> (verged rig, general)</td><td class="l">baseline, each camera's aim angles, \(K\), detected pixel</td><td class="l">a measured baseline</td><td class="l">always, given the inputs</td><td><span class="badge simulated">simulated</span></td></tr>
+<tr><td class="l"><strong>Angle-only IMU</strong> (verged rig)</td><td class="l">baseline and the two aim angles</td><td class="l">the drone sits exactly on both optical axes</td><td class="l">the aim is perfect</td><td><span class="badge measured">built</span> <span class="badge simulated">simulated</span></td></tr>
+<tr><td class="l"><strong>Parallel disparity</strong> \(Z = fB/d\)</td><td class="l">baseline, focal length, the two pixel positions</td><td class="l">both optical axes parallel and perpendicular to the baseline</td><td class="l">the rig is parallel</td><td><span class="badge measured">built</span> <span class="badge simulated">simulated</span></td></tr>
+<tr><td class="l"><strong>Learned regression</strong> (DroneDepthNet)</td><td class="l">26 features: rig parameters, box centres and sizes, detector confidences, and the geometric answers above</td><td class="l">the test geometry resembles the training geometry</td><td class="l">never exactly; learns corrections</td><td><span class="badge measured">built</span> <span class="badge planned">evaluation pending</span></td></tr>
+<tr><td class="l"><strong>End-to-end stereo network</strong></td><td class="l">both frames, both IMUs, rig parameters</td><td class="l">as above, plus detection learned jointly</td><td class="l">never exactly</td><td><span class="badge planned">experimental</span></td></tr>
+</table>
+</div>
+
+<p>The first four are geometry and need no training data. The simulator on this site implements all four (plus two numerical variants of the general method), feeds them identical frames and identical sensor errors, and reports their errors side by side. The last two are learned; they are listed for completeness, and the comparison the project intends for them is described in section 4.</p>
+
+<h3>What each one gets wrong</h3>
+
+<dl>
+  <dt>Two rays from pose</dt><dd>Lives and dies by the heading sensors. A compass error of \(\sigma\) at range \(Z\) with baseline \(B\) costs about \(Z^2\sigma/B\); with two independent stations the two compass errors add. Its strength is that the stations can be far apart, which divides that cost.</dd>
+  <dt>Angles + pixels</dt><dd>The right model for a verged rig: the pixel offset refines the aim angle, so the fix is exact whenever the aim angles and the baseline are. Its error is the error of the aim angles, with the same \(Z^2\sigma/B\) law; detector jitter contributes only a pixel's worth of angle, which on a 210 mm lens is 0.003°.</dd>
+  <dt>Angle-only IMU</dt><dd>Identical to the above when the drone is dead centre in both images, which the archive's hovering experiments arranged. The moment the drone moves off the optical axis, the error equals the offset: a drone 3 m left of the aim point is reported 3 m wrong, regardless of sensors.</dd>
+  <dt>Parallel disparity</dt><dd>On a parallel rig, exact. On a verged rig, the disparity is near zero by construction, and \(fB/d\) returns values of arbitrary size: in the simulation, thousands to hundreds of thousands of metres on every archive configuration, and "no fix" at all when the drone is centred. This is not a sensor problem and no sensor improvement helps; the formula is the wrong model for the hardware.</dd>
+  <dt>Learned regression</dt><dd>Interpolates well inside the design grid it was trained on and has no guarantee outside it. Its honest number is a held-out test on experiments it never saw, grouped by experiment so that frames of one flight cannot leak into both sides. That evaluation is pending.</dd>
+</dl>
+
+<h2>2. Try them on the archive's geometries</h2>
+
+<p>The explorer below is the second-generation rig in a nutshell: two cameras on a baseline, both aimed at a drone, drawn from above and from the side. The sliders cover the archive's design grid. The dashed lines are what a parallel rig would see; the shaded wedges are what the verged cameras see. The three error figures come from 300 Monte Carlo draws of the sensor errors you set.</p>
+
+<div class="demo" data-demo="rig"></div>
+<p class="caption">Figure 1. Rig explorer. Start from the archive's B20 H75 D100 F210 configuration. Set every error to zero and the three methods agree with the truth (disparity reports no fix, since a centred drone has zero disparity). Add 0.6° of yaw jitter: the angle methods drift by metres, disparity by kilometres. Move the drone off-axis with the lateral slider and watch angle-only inherit the offset while angles + pixels does not.</p>
+
+<h2>3. Sensing modalities</h2>
+
+<p>Optical triangulation is one answer to a question with many answers. The table is qualitative and deliberately conservative; numbers for commercial systems vary enormously with the product, the target and the weather.</p>
+
+<div class="tablewrap">
+<table class="neat">
+<tr><th class="title l">approach</th><th class="title l">what it measures</th><th class="title">3D position</th><th class="title">passive</th><th class="title">night / weather</th><th class="title">cost</th><th class="title l">main limitation</th></tr>
+<tr class="hi"><td class="l"><strong>Optical triangulation (Visual Sentinel)</strong></td><td class="l">bearing from two or more cameras with known pose</td><td>yes</td><td>yes</td><td>daylight; thermal cameras extend it</td><td>low</td><td class="l">needs line of sight from two places; accuracy falls with range² / baseline; pointing must be known precisely</td></tr>
+<tr><td class="l">Radar</td><td class="l">range and bearing from reflected radio pulses</td><td>yes</td><td>no (emits)</td><td>yes</td><td>high</td><td class="l">small plastic drones return very little; clutter at low altitude; licensing and power</td></tr>
+<tr><td class="l">RF detection / direction finding</td><td class="l">the drone's own control and video links</td><td>bearing only (position with several receivers)</td><td>yes</td><td>yes</td><td>low–medium</td><td class="l">silent or autonomous drones emit nothing; balloons emit nothing</td></tr>
+<tr><td class="l">Acoustic arrays</td><td class="l">bearing from propeller noise</td><td>bearing only</td><td>yes</td><td>yes</td><td>low</td><td class="l">short range; wind and background noise; silent targets</td></tr>
+<tr><td class="l">Single camera + known size</td><td class="l">range from how big a known object appears</td><td>approximately</td><td>yes</td><td>daylight</td><td>very low</td><td class="l">needs the object's true size; a 0.35 m drone is a few pixels at 100 m on a wide lens</td></tr>
+<tr><td class="l">LiDAR</td><td class="l">range by laser time of flight</td><td>yes</td><td>no (emits)</td><td>yes, except fog</td><td>medium–high</td><td class="l">short range on small targets; narrow coverage</td></tr>
+</table>
+</div>
+
+<p>In practice these are combined: radio sensing cues a camera, a camera confirms and localizes, radar covers the far field. Visual Sentinel's contribution is a localizing sensor that costs about as much as its cameras, works on anything visible, and whose accuracy improves by placing the cameras further apart.</p>
+
+<h2>4. How variants are compared</h2>
+
+<p>Every variant is run on the same simulated scenarios and reports the same five numbers, which are the ones the <a href="simulator.html">Simulator</a> shows:</p>
+
+<dl>
+  <dt>Fix error</dt><dd>Distance between the computed position and the true one, at the instant of the fix. Mean and maximum over the run.</dd>
+  <dt>Offset including lag</dt><dd>Distance between the true position <em>now</em> and the last fix available. This is what an operator or an interceptor experiences; it includes the localization rate and missed detections.</dd>
+  <dt>Coverage</dt><dd>Share of time for which a fix exists.</dd>
+  <dt>Reprojection RMS</dt><dd>Self-consistency of the fix with the measurements; the only one of these a fielded system can compute.</dd>
+  <dt>Range error per camera</dt><dd>Because the error is mostly along the line of sight, this shows where it hides.</dd>
+</dl>
+
+<p>Learned estimators join this table on the same terms: trained on one set of experiments, scored on another, and run through the simulator's noise models like everything else. Results for new variants will be added as rows in a single table, with links to the scenario files so that anyone can rerun them.</p>
+    <div class="prev-next"><a href="method.html" class="prev">&larr; System</a><a href="results.html" class="next">Results &rarr;</a></div>
+    <div class="clearer"></div>
+  </div>
+  <div id="footer">
+    <address>
+      <span class="copyright">Content by the Visual Sentinel team, <a href="about.html">German Jordanian University</a>. Design after <a href="http://mark.reid.name/">Mark Reid</a> and <a href="https://ksimek.github.io/">Kyle Simek</a>.</span>
+      <span class="engine">Built with <a href="https://threejs.org/">three.js</a> and <a href="https://www.mathjax.org/">MathJax</a></span>
+    </address>
+  </div>
+</div>
+</body>
+</html>
